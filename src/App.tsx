@@ -2,17 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { 
   MessageCircle, 
   ArrowUp, 
-  ChevronRight, 
   History, 
   Target, 
   Users, 
   Award, 
-  HelpCircle,
   Image as ImageIcon,
   CheckCircle2,
-  Phone,
-  Mail,
-  MapPin,
   Loader2
 } from 'lucide-react';
 import { supabase } from './supabaseClient';
