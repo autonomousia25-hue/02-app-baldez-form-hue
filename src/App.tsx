@@ -5,7 +5,6 @@ import {
   History, 
   Target, 
   Users, 
-  Image as ImageIcon,
   CheckCircle2,
   Loader2,
   Plus,
@@ -13,7 +12,8 @@ import {
   AlertCircle,
   ClipboardCheck,
   Info,
-  Scale
+  Scale,
+  Camera
 } from 'lucide-react';
 import { supabase } from './supabaseClient';
 import './index.css';
@@ -82,7 +82,8 @@ function App() {
   const scrollToTop = () => window.scrollTo({ top: 0, behavior: 'smooth' });
 
   const handleCopyLink = () => {
-    navigator.clipboard.writeText('https://02-app-baldez-form-hue.vercel.app/docs/manual_equipe.md');
+    const link = 'https://02-app-baldez-form-hue.vercel.app/docs/manual_equipe.md';
+    navigator.clipboard.writeText(link);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -169,7 +170,7 @@ function App() {
     } catch (err: any) {
       console.error('Submission Error:', err);
       setErrorMsg(err.message || 'Erro de conexão.');
-      alert('Falha ao salvar no banco. Verifique os logs do console ou as chaves da Vercel.');
+      alert(`Falha ao salvar: ${err.message}`);
     } finally {
       setLoading(false);
     }
@@ -221,7 +222,6 @@ function App() {
 
         {!success && (
           <form onSubmit={handleSubmit} className="space-y-16">
-            {/* Seção 1: Identidade */}
             <section className="glass-card space-y-10">
               <div className="flex items-center gap-3 border-b border-white/5 pb-6">
                 <History className="text-gold" size={28} />
@@ -238,7 +238,6 @@ function App() {
               </div>
             </section>
 
-            {/* Seção 2: Áreas de Atuação (DINÂMICA) */}
             <section className="glass-card space-y-10">
               <div className="flex items-center gap-3 border-b border-white/5 pb-6">
                 <Target className="text-gold" size={28} />
@@ -276,7 +275,6 @@ function App() {
               </div>
             </section>
 
-            {/* Seção 3: Equipe */}
             <section className="glass-card space-y-10">
               <div className="flex items-center gap-3 border-b border-white/5 pb-6">
                 <Users className="text-gold" size={28} />
@@ -309,9 +307,15 @@ function App() {
                   <Plus size={18} /> Inserir Advogado na Lista
                 </button>
               </div>
+
+              <div className="bg-gold/5 p-5 rounded-xl border border-gold/20 flex items-center gap-4">
+                <Camera className="text-gold" size={24} />
+                <p className="text-[11px] text-slate-300 leading-relaxed">
+                  Lembre-se de enviar a foto vertical de cada especialista via WhatsApp para o Squad.
+                </p>
+              </div>
             </section>
 
-            {/* Seção 4: Contato Final */}
             <section className="glass-card space-y-10">
               <div className="flex items-center gap-3 border-b border-white/5 pb-6">
                 <Scale className="text-gold" size={28} />
@@ -333,7 +337,7 @@ function App() {
           <p>© 2026 Baldez Advogados Associados.</p>
           <button onClick={handleCopyLink} className="mt-6 text-gold hover:text-white transition-colors flex items-center gap-2 mx-auto">
             {copied ? <ClipboardCheck size={14} /> : <Plus size={14} />} 
-            {copied ? 'Link Copiado!' : 'Link do Manual'}
+            {copied ? 'Link do Manual' : 'Link do Manual'}
           </button>
         </footer>
       </main>
