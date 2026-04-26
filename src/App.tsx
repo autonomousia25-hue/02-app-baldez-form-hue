@@ -9,8 +9,6 @@ import {
   Loader2,
   Plus,
   Trash2,
-  AlertCircle,
-  ClipboardCheck,
   Info,
   Scale,
   Camera,
@@ -39,8 +37,6 @@ function App() {
   const [showTopButton, setShowTopButton] = useState(false);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
 
   // Form Data
   const [formData, setFormData] = useState({
@@ -84,13 +80,6 @@ function App() {
 
   const scrollToTop = () => window.scrollTo({ top: 0, behavior: 'smooth' });
 
-  const handleCopyLink = () => {
-    const link = 'https://02-app-baldez-form-hue.vercel.app/docs/manual_equipe.md';
-    navigator.clipboard.writeText(link);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
   const handlePhoneMask = (value: string) => {
     const numbers = value.replace(/\D/g, '').slice(0, 11);
     return numbers
@@ -133,17 +122,16 @@ function App() {
     if (expertises.length === 0) return alert('⚠️ Adicione ao menos uma área de atuação.');
     
     setLoading(true);
-    setErrorMsg(null);
     
     try {
       const payload = {
-        versao_schema: '6.0_PO_ALIGNED',
+        versao_schema: '6.1_CLEAN',
         identidade: {
           missao: formData.missao,
           historia: formData.historia
         },
         areas_atuacao: expertises,
-        equipe: specialists, // Já segue o padrão nome, cargo, oab, bio, perfilCompleto
+        equipe: specialists,
         contato: {
           email: formData.contato_email,
           whatsapp: formData.contato_whatsapp
@@ -169,7 +157,6 @@ function App() {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err: any) {
       console.error('Error:', err);
-      setErrorMsg(err.message || 'Erro de conexão.');
       alert(`⚠️ Falha no envio: ${err.message}. Verifique as chaves da Vercel.`);
     } finally {
       setLoading(false);
