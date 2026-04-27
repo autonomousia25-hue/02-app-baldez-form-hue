@@ -292,7 +292,7 @@ function App() {
               <div className="space-y-8 mt-4">
                 <div className="form-group"><label>Área (Ex: Direito Tributário)</label><input value={currentExpertise.area} onChange={(e) => setCurrentExpertise({...currentExpertise, area: e.target.value})} placeholder="Título da área" /></div>
                 <div className="form-group"><label>Descrição do Serviço</label><textarea rows={2} value={currentExpertise.descricao} onChange={(e) => setCurrentExpertise({...currentExpertise, descricao: e.target.value})} placeholder="Explique o que o escritório oferece..." /></div>
-                <button type="button" onClick={addExpertise} className="btn-outline w-full"><Plus size={18} /> Inserir Área</button>
+                <button type="button" onClick={addExpertise} className="btn-outline w-full mt-12"><Plus size={18} /> Inserir Área</button>
               </div>
             </motion.section>
 
@@ -342,7 +342,7 @@ function App() {
                 </div>
                 <div className="form-group"><label>Bio Curta (Resumo do Card)</label><input value={currentSpecialist.bio} onChange={(e) => setCurrentSpecialist({...currentSpecialist, bio: e.target.value})} placeholder="Uma frase impactante sobre a atuação..." /></div>
                 <div className="form-group"><label>Perfil Completo (Modal)</label><textarea rows={4} value={currentSpecialist.perfilCompleto} onChange={(e) => setCurrentSpecialist({...currentSpecialist, perfilCompleto: e.target.value})} placeholder="Formação, especializações e experiência..." /></div>
-                <button type="button" onClick={addSpecialist} className="btn-outline w-full !bg-gold/5"><Plus size={18} /> Inserir na Equipe</button>
+                <button type="button" onClick={addSpecialist} className="btn-outline w-full !bg-gold/5 mt-12"><Plus size={18} /> Inserir na Equipe</button>
               </div>
             </motion.section>
 
@@ -369,7 +369,7 @@ function App() {
               </div>
             </motion.section>
 
-            <button type="submit" disabled={loading || formErrors.email || formErrors.whatsapp} className="btn-primary !py-8 !text-base shadow-glow">
+            <button type="submit" disabled={loading || formErrors.email || formErrors.whatsapp} className="btn-primary mt-12 !py-8 !text-base shadow-glow">
               {loading ? <Loader2 className="animate-spin" size={28} /> : <><FileText size={24} /> Finalizar e Consolidar Dados</>}
             </button>
           </form>

@@ -56,7 +56,6 @@ h1, h2, h3 {
   box-shadow: var(--shadow-premium);
   transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
-  overflow: hidden;
 }
 
 .glass-card::before {
