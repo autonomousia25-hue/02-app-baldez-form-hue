@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   MessageCircle, 
   ArrowUp, 
@@ -9,14 +9,10 @@ import {
   Loader2,
   Plus,
   Trash2,
-  AlertCircle,
-  ClipboardCheck,
-  Info,
   Scale,
   Camera,
   FileText,
   Eye,
-  UploadCloud,
   Check
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -47,7 +43,6 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [success, setSuccess] = useState(false);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [showPreview, setShowPreview] = useState(false);
   const [previewMember, setPreviewMember] = useState<Specialist | null>(null);
 
