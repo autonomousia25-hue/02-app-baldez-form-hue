@@ -247,7 +247,7 @@ function App() {
         </AnimatePresence>
 
         {!success && (
-          <form onSubmit={handleSubmit} className="space-y-16">
+          <form onSubmit={handleSubmit} className="space-y-24">
             {/* Seção Identidade */}
             <motion.section initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="glass-card space-y-12">
               <div className="flex items-center justify-between border-b border-gold/10 pb-8">
@@ -289,7 +289,7 @@ function App() {
                   ))}
                 </AnimatePresence>
               </div>
-              <div className="bg-navy-light p-10 rounded-sm border border-gold/20 space-y-8">
+              <div className="space-y-8 mt-4">
                 <div className="form-group"><label>Área (Ex: Direito Tributário)</label><input value={currentExpertise.area} onChange={(e) => setCurrentExpertise({...currentExpertise, area: e.target.value})} placeholder="Título da área" /></div>
                 <div className="form-group"><label>Descrição do Serviço</label><textarea rows={2} value={currentExpertise.descricao} onChange={(e) => setCurrentExpertise({...currentExpertise, descricao: e.target.value})} placeholder="Explique o que o escritório oferece..." /></div>
                 <button type="button" onClick={addExpertise} className="btn-outline w-full"><Plus size={18} /> Inserir Área</button>
@@ -323,7 +323,7 @@ function App() {
                   ))}
                 </AnimatePresence>
               </div>
-              <div className="bg-navy-light p-10 rounded-sm border border-gold/20 space-y-8">
+              <div className="space-y-8 mt-4">
                 <div className="grid md:grid-cols-2 gap-8">
                   <div className="form-group"><label>Nome Completo</label><input value={currentSpecialist.nome} onChange={(e) => setCurrentSpecialist({...currentSpecialist, nome: e.target.value})} placeholder="Nome" /></div>
                   <div className="form-group"><label>Cargo / Função</label><input value={currentSpecialist.cargo} onChange={(e) => setCurrentSpecialist({...currentSpecialist, cargo: e.target.value})} placeholder="Ex: Sócio Fundador" /></div>
@@ -375,7 +375,7 @@ function App() {
           </form>
         )}
 
-        <footer className="mt-32 text-center text-slate-500 text-[10px] uppercase tracking-[0.3em] py-12 border-t border-gold/10">
+        <footer className="mt-16 text-center text-slate-500 text-[10px] uppercase tracking-[0.3em] py-8 border-t border-gold/10">
           <p>© 2026 Baldez Advogados Associados. Excelência em Advocacia.</p>
         </footer>
       </main>
