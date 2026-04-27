@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   MessageCircle, 
   ArrowUp, 
@@ -9,12 +9,20 @@ import {
   Loader2,
   Plus,
   Trash2,
+  AlertCircle,
+  ClipboardCheck,
   Info,
   Scale,
   Camera,
-  FileText
+  FileText,
+  Eye,
+  UploadCloud,
+  Check
 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from './supabaseClient';
+import Tooltip from './components/Tooltip';
+import CardPreview from './components/CardPreview';
 import './index.css';
 
 interface Specialist {
@@ -24,6 +32,7 @@ interface Specialist {
   oab: string;
   bio: string;
   perfilCompleto: string;
+  imagem?: string;
 }
 
 interface Expertise {
@@ -36,7 +45,11 @@ function App() {
   const [scrollProgress, setScrollProgress] = useState(0);
   const [showTopButton, setShowTopButton] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [showPreview, setShowPreview] = useState(false);
+  const [previewMember, setPreviewMember] = useState<Specialist | null>(null);
 
   // Form Data
   const [formData, setFormData] = useState({
@@ -46,24 +59,28 @@ function App() {
     contato_whatsapp: ''
   });
 
+  const [formErrors, setFormErrors] = useState({
+    email: false,
+    whatsapp: false
+  });
+
   // Dynamic Lists
   const [specialists, setSpecialists] = useState<Specialist[]>([]);
   const [expertises, setExpertises] = useState<Expertise[]>([]);
 
-  // Current Inputs (PO Aligned)
+  // Current Inputs
   const [currentSpecialist, setCurrentSpecialist] = useState<Specialist>({
     id: '',
     nome: '',
     cargo: '',
     oab: '',
     bio: '',
-    perfilCompleto: ''
+    perfilCompleto: '',
+    imagem: ''
   });
 
   const [currentExpertise, setCurrentExpertise] = useState<Expertise>({
-    id: '',
-    area: '',
-    descricao: ''
+    id: '', area: '', descricao: ''
   });
 
   useEffect(() => {
@@ -73,40 +90,71 @@ function App() {
       setScrollProgress(progress);
       setShowTopButton(window.scrollY > 300);
     };
-
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
   const scrollToTop = () => window.scrollTo({ top: 0, behavior: 'smooth' });
 
+  const validateEmail = (email: string) => {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  };
+
+  const validatePhone = (phone: string) => {
+    return phone.replace(/\D/g, '').length >= 10;
+  };
+
   const handlePhoneMask = (value: string) => {
     const numbers = value.replace(/\D/g, '').slice(0, 11);
-    return numbers
+    const masked = numbers
       .replace(/(\d{2})(\d)/, '($1) $2')
       .replace(/(\d{5})(\d)/, '$1-$2')
       .replace(/(-\d{4})\d+?$/, '$1');
+    return masked;
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     if (name === 'contato_whatsapp') {
-      setFormData({ ...formData, [name]: handlePhoneMask(value) });
+      const masked = handlePhoneMask(value);
+      setFormData({ ...formData, [name]: masked });
+      setFormErrors({ ...formErrors, whatsapp: !validatePhone(masked) && value !== '' });
+    } else if (name === 'contato_email') {
+      setFormData({ ...formData, [name]: value });
+      setFormErrors({ ...formErrors, email: !validateEmail(value) && value !== '' });
     } else {
       setFormData({ ...formData, [name]: value });
     }
   };
 
-  // Specialist Handlers
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${crypto.randomUUID()}.${fileExt}`;
+      const filePath = `equipe/${fileName}`;
+      const { error: uploadError } = await supabase.storage.from('fotos-equipe').upload(filePath, file);
+      if (uploadError) throw uploadError;
+      const { data } = supabase.storage.from('fotos-equipe').getPublicUrl(filePath);
+      setCurrentSpecialist({ ...currentSpecialist, imagem: data.publicUrl });
+    } catch (error: any) {
+      alert(`Erro no upload: ${error.message}`);
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const addSpecialist = () => {
-    if (!currentSpecialist.nome || !currentSpecialist.cargo) return alert('Insira Nome e Cargo do especialista.');
+    if (!currentSpecialist.nome || !currentSpecialist.cargo) return alert('Insira ao menos Nome e Cargo.');
     setSpecialists([...specialists, { ...currentSpecialist, id: crypto.randomUUID() }]);
-    setCurrentSpecialist({ id: '', nome: '', cargo: '', oab: '', bio: '', perfilCompleto: '' });
+    setCurrentSpecialist({ id: '', nome: '', cargo: '', oab: '', bio: '', perfilCompleto: '', imagem: '' });
   };
 
   const removeSpecialist = (id: string) => setSpecialists(specialists.filter(s => s.id !== id));
+  const handlePreview = (member: Specialist) => { setPreviewMember(member); setShowPreview(true); };
 
-  // Expertise Handlers
   const addExpertise = () => {
     if (!currentExpertise.area) return alert('Insira a área de atuação.');
     setExpertises([...expertises, { ...currentExpertise, id: crypto.randomUUID() }]);
@@ -117,157 +165,217 @@ function App() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
     if (specialists.length === 0) return alert('⚠️ Adicione ao menos um especialista.');
     if (expertises.length === 0) return alert('⚠️ Adicione ao menos uma área de atuação.');
+    if (formErrors.email || formErrors.whatsapp) return alert('⚠️ Corrija os erros de validação antes de enviar.');
     
     setLoading(true);
-    
     try {
       const payload = {
-        versao_schema: '6.1_CLEAN',
-        identidade: {
-          missao: formData.missao,
-          historia: formData.historia
-        },
+        versao_schema: '7.0_PREMIUM',
+        identidade: { missao: formData.missao, historia: formData.historia },
         areas_atuacao: expertises,
         equipe: specialists,
-        contato: {
-          email: formData.contato_email,
-          whatsapp: formData.contato_whatsapp
-        }
+        contato: { email: formData.contato_email, whatsapp: formData.contato_whatsapp }
       };
-
-      const { error } = await supabase
-        .from('conteudo_site_solicitacoes')
-        .insert([
-          { 
-            secao: 'baldez_po_v6', 
-            conteudo: payload,
-            contato_solicitante: formData.contato_email || formData.contato_whatsapp
-          }
-        ]);
-
+      const { error } = await supabase.from('conteudo_site_solicitacoes').insert([
+        { secao: 'baldez_premium_v7', conteudo: payload, contato_solicitante: formData.contato_email || formData.contato_whatsapp }
+      ]);
       if (error) throw error;
-
       setSuccess(true);
       setFormData({ missao: '', historia: '', contato_email: '', contato_whatsapp: '' });
       setSpecialists([]);
       setExpertises([]);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err: any) {
-      console.error('Error:', err);
-      alert(`⚠️ Falha no envio: ${err.message}. Verifique as chaves da Vercel.`);
-    } finally {
-      setLoading(false);
-    }
+      alert(`⚠️ Falha no envio: ${err.message}`);
+    } finally { setLoading(false); }
   };
 
   return (
-    <div className="min-h-screen pb-20">
+    <div className="min-h-screen pb-20 font-sans bg-navy">
       <div className="scroll-progress" style={{ width: `${scrollProgress}%` }} />
 
       <main className="container px-4 md:px-0">
-        <header className="flex flex-col items-center mb-16 text-center">
-          <div className="h-24 mb-6"><img src="/baldez-logo-desktop.png" alt="Baldez" className="h-full object-contain" /></div>
-          <h1 className="text-3xl md:text-4xl mb-4 uppercase font-bold tracking-tight">Refinamento de Conteúdo <br/><span className="text-gold">BALDEZ ADVOGADOS</span></h1>
-          <p className="text-slate-400 max-w-2xl text-xs md:text-sm">Portal exclusivo para envio de dados em conformidade com o Projeto Site Web App.</p>
-        </header>
-
-        {success && (
-          <div className="glass-card border-green-500 flex flex-col items-center gap-6 text-center mb-12 py-16">
-            <div className="bg-green-500/20 p-6 rounded-full animate-pulse"><CheckCircle2 size={64} className="text-green-400" /></div>
-            <div>
-              <h3 className="text-3xl font-bold text-white mb-4">ENVIADO COM SUCESSO!</h3>
-              <p className="text-slate-300 max-w-md mx-auto">Os dados estão em conformidade e foram integrados ao banco de dados.</p>
-              <button onClick={() => setSuccess(false)} className="mt-8 btn-primary !w-auto !px-10 !py-3 !text-sm">Novo Envio</button>
-            </div>
+        <motion.header 
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex flex-col items-center mb-24 text-center"
+        >
+          <div className="h-20 md:h-28 mb-8">
+            <img src="/baldez-logo-desktop.png" alt="Baldez" className="h-full object-contain" />
           </div>
-        )}
+          <h1 className="text-3xl md:text-5xl mb-6 uppercase font-serif font-medium tracking-tight leading-tight">
+            Refinamento de <span className="text-gold italic">Informações</span><br/>
+            <span className="text-white text-2xl md:text-3xl font-sans font-black tracking-[0.3em]">BALDEZ ADVOGADOS ASSOCIADOS</span>
+          </h1>
+          <div className="w-12 h-[2px] bg-gold mb-6" />
+          <p className="text-slate-400 max-w-2xl text-[10px] md:text-xs uppercase tracking-[0.2em]">
+            Portal exclusivo para envio de dados em conformidade com o Projeto Site Web App.
+          </p>
+        </motion.header>
+
+        <AnimatePresence>
+          {success && (
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="glass-card border-gold flex flex-col items-center gap-8 text-center mb-12 py-20"
+            >
+              <div className="bg-gold/10 p-8 rounded-full border border-gold/30">
+                <CheckCircle2 size={64} className="text-gold" />
+              </div>
+              <div>
+                <h3 className="text-4xl font-serif text-white mb-6">ENVIADO COM SUCESSO!</h3>
+                <p className="text-slate-400 max-w-md mx-auto text-sm leading-relaxed">
+                  As informações foram consolidadas seguindo os padrões de excelência Baldez.
+                </p>
+                <button onClick={() => setSuccess(false)} className="mt-12 btn-primary !w-auto !px-16">Novo Envio</button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {!success && (
           <form onSubmit={handleSubmit} className="space-y-16">
-            <section className="glass-card space-y-10">
-              <div className="flex items-center gap-3 border-b border-white/5 pb-6">
-                <History className="text-gold" size={28} /><h2 className="text-xl md:text-2xl font-bold uppercase tracking-wider">Identidade Baldez</h2>
+            {/* Seção Identidade */}
+            <motion.section initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="glass-card space-y-12">
+              <div className="flex items-center justify-between border-b border-gold/10 pb-8">
+                <div className="flex items-center gap-4">
+                  <History className="text-gold" size={24} />
+                  <h2 className="text-2xl font-serif font-medium tracking-wide">Identidade Baldez</h2>
+                </div>
+                <Tooltip text="Defina a essência do escritório. A missão aparece na seção principal (Hero) e a história na seção 'Quem Somos'." />
               </div>
-              <div className="form-group"><label>Missão do Escritório</label><textarea name="missao" rows={3} value={formData.missao} onChange={handleChange} placeholder="Missão..." /><p className="heuristic-help"><Info size={12} /> H10: Define o tom de voz da Hero.</p></div>
-              <div className="form-group"><label>Nossa História</label><textarea name="historia" rows={5} value={formData.historia} onChange={handleChange} placeholder="Trajetória..." /></div>
-            </section>
+              <div className="form-group">
+                <label>Missão do Escritório</label>
+                <textarea name="missao" value={formData.missao} onChange={handleChange} placeholder="Ex: Defender o legado de nossos clientes com ética e expertise técnica superior..." />
+              </div>
+              <div className="form-group">
+                <label>Nossa História</label>
+                <textarea name="historia" rows={6} value={formData.historia} onChange={handleChange} placeholder="Descreva a trajetória do escritório..." />
+              </div>
+            </motion.section>
 
-            <section className="glass-card space-y-10">
-              <div className="flex items-center gap-3 border-b border-white/5 pb-6">
-                <Target className="text-gold" size={28} /><h2 className="text-xl md:text-2xl font-bold uppercase tracking-wider">Áreas de Atuação</h2>
+            {/* Seção Áreas de Atuação */}
+            <motion.section initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="glass-card space-y-12">
+              <div className="flex items-center justify-between border-b border-gold/10 pb-8">
+                <div className="flex items-center gap-4">
+                  <Target className="text-gold" size={24} />
+                  <h2 className="text-2xl font-serif font-medium tracking-wide">Áreas de Atuação</h2>
+                </div>
+                <Tooltip text="Liste os serviços oferecidos. Cada área terá um ícone exclusivo e descrição detalhada no site." />
               </div>
-              {expertises.length > 0 && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <AnimatePresence>
                   {expertises.map((e) => (
-                    <div key={e.id} className="bg-white/5 p-4 rounded-xl border border-white/10 flex justify-between items-start">
-                      <div><p className="text-gold font-bold text-xs uppercase tracking-widest">{e.area}</p><p className="text-[11px] text-slate-400 mt-1">{e.descricao}</p></div>
-                      <button type="button" onClick={() => removeExpertise(e.id)} className="text-red-400"><Trash2 size={16} /></button>
-                    </div>
+                    <motion.div key={e.id} initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} className="bg-navy-light/50 p-6 rounded-sm border border-gold/10 flex justify-between items-start group hover:border-gold/40 transition-all">
+                      <div>
+                        <p className="text-gold font-black text-[10px] uppercase tracking-[0.2em] mb-2">{e.area}</p>
+                        <p className="text-[11px] text-slate-400 font-light leading-relaxed">{e.descricao}</p>
+                      </div>
+                      <button type="button" onClick={() => removeExpertise(e.id)} className="text-red-400/50 hover:text-red-400 transition-colors border-none bg-transparent cursor-pointer"><Trash2 size={16} /></button>
+                    </motion.div>
                   ))}
-                </div>
-              )}
-              <div className="bg-white/5 p-8 rounded-2xl border border-gold/20 space-y-6">
-                <div className="form-group"><label className="text-[10px]">Área (Ex: Direito do Trabalho)</label><input value={currentExpertise.area} onChange={(e) => setCurrentExpertise({...currentExpertise, area: e.target.value})} placeholder="Área" /></div>
-                <div className="form-group"><label className="text-[10px]">O que fazemos (Descrição Curta)</label><textarea rows={2} value={currentExpertise.descricao} onChange={(e) => setCurrentExpertise({...currentExpertise, descricao: e.target.value})} placeholder="Descrição..." /></div>
-                <button type="button" onClick={addExpertise} className="w-full py-4 border-2 border-gold/40 text-gold rounded-xl font-bold hover:bg-gold hover:text-navy transition-all uppercase text-xs tracking-widest"><Plus size={18} /> Inserir Área</button>
+                </AnimatePresence>
               </div>
-            </section>
+              <div className="bg-navy-light p-10 rounded-sm border border-gold/20 space-y-8">
+                <div className="form-group"><label>Área (Ex: Direito Tributário)</label><input value={currentExpertise.area} onChange={(e) => setCurrentExpertise({...currentExpertise, area: e.target.value})} placeholder="Título da área" /></div>
+                <div className="form-group"><label>Descrição do Serviço</label><textarea rows={2} value={currentExpertise.descricao} onChange={(e) => setCurrentExpertise({...currentExpertise, descricao: e.target.value})} placeholder="Explique o que o escritório oferece..." /></div>
+                <button type="button" onClick={addExpertise} className="btn-outline w-full"><Plus size={18} /> Inserir Área</button>
+              </div>
+            </motion.section>
 
-            <section className="glass-card space-y-10">
-              <div className="flex items-center gap-3 border-b border-white/5 pb-6">
-                <Users className="text-gold" size={28} /><h2 className="text-xl md:text-2xl font-bold uppercase tracking-wider">Equipe de Especialistas</h2>
+            {/* Seção Equipe */}
+            <motion.section initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="glass-card space-y-12">
+              <div className="flex items-center justify-between border-b border-gold/10 pb-8">
+                <div className="flex items-center gap-4">
+                  <Users className="text-gold" size={24} />
+                  <h2 className="text-2xl font-serif font-medium tracking-wide">Equipe de Especialistas</h2>
+                </div>
+                <Tooltip text="Adicione os advogados. Use fotos verticais nítidas. O preview permite conferir o resultado final." />
               </div>
-              {specialists.length > 0 && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <AnimatePresence>
                   {specialists.map((s) => (
-                    <div key={s.id} className="bg-white/5 p-4 rounded-xl border border-white/10 flex justify-between items-center">
-                      <div><p className="font-bold text-white text-sm">{s.nome}</p><p className="text-[10px] text-gold uppercase">{s.cargo}</p></div>
-                      <button type="button" onClick={() => removeSpecialist(s.id)} className="text-red-400"><Trash2 size={18} /></button>
-                    </div>
+                    <motion.div key={s.id} initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="bg-navy-light/50 p-6 rounded-sm border border-gold/10 flex justify-between items-center group hover:border-gold/40 transition-all">
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-full border border-gold/30 overflow-hidden bg-navy">
+                          {s.imagem ? <img src={s.imagem} alt={s.nome} className="w-full h-full object-cover" /> : <Scale className="w-full h-full p-3 text-gold/20" />}
+                        </div>
+                        <div><p className="font-bold text-white text-sm tracking-wide">{s.nome}</p><p className="text-[9px] text-gold uppercase font-black tracking-widest">{s.cargo}</p></div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button type="button" onClick={() => handlePreview(s)} className="p-2 text-gold/50 hover:text-gold transition-colors border-none bg-transparent cursor-pointer"><Eye size={18} /></button>
+                        <button type="button" onClick={() => removeSpecialist(s.id)} className="p-2 text-red-400/50 hover:text-red-400 transition-colors border-none bg-transparent cursor-pointer"><Trash2 size={18} /></button>
+                      </div>
+                    </motion.div>
                   ))}
+                </AnimatePresence>
+              </div>
+              <div className="bg-navy-light p-10 rounded-sm border border-gold/20 space-y-8">
+                <div className="grid md:grid-cols-2 gap-8">
+                  <div className="form-group"><label>Nome Completo</label><input value={currentSpecialist.nome} onChange={(e) => setCurrentSpecialist({...currentSpecialist, nome: e.target.value})} placeholder="Nome" /></div>
+                  <div className="form-group"><label>Cargo / Função</label><input value={currentSpecialist.cargo} onChange={(e) => setCurrentSpecialist({...currentSpecialist, cargo: e.target.value})} placeholder="Ex: Sócio Fundador" /></div>
                 </div>
-              )}
-              <div className="bg-white/5 p-8 rounded-2xl border border-gold/20 space-y-6">
-                <div className="grid md:grid-cols-3 gap-6">
-                  <div className="form-group col-span-1"><label className="text-[10px]">Nome Completo</label><input value={currentSpecialist.nome} onChange={(e) => setCurrentSpecialist({...currentSpecialist, nome: e.target.value})} placeholder="Nome" /></div>
-                  <div className="form-group col-span-1"><label className="text-[10px]">Cargo (Ex: Sócio)</label><input value={currentSpecialist.cargo} onChange={(e) => setCurrentSpecialist({...currentSpecialist, cargo: e.target.value})} placeholder="Cargo" /></div>
-                  <div className="form-group col-span-1"><label className="text-[10px]">Número OAB</label><input value={currentSpecialist.oab} onChange={(e) => setCurrentSpecialist({...currentSpecialist, oab: e.target.value})} placeholder="OAB" /></div>
+                <div className="grid md:grid-cols-2 gap-8">
+                  <div className="form-group"><label>Número OAB (Opcional)</label><input value={currentSpecialist.oab} onChange={(e) => setCurrentSpecialist({...currentSpecialist, oab: e.target.value})} placeholder="Ex: MA 11.061" /></div>
+                  <div className="form-group">
+                    <label>Foto do Advogado</label>
+                    <div className="relative">
+                      <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" id="photo-upload" />
+                      <label htmlFor="photo-upload" className={`btn-outline !py-4 cursor-pointer ${uploading ? 'opacity-50 pointer-events-none' : ''}`}>
+                        {uploading ? <Loader2 className="animate-spin" size={18} /> : (currentSpecialist.imagem ? <><Check size={18} /> Foto Carregada</> : <><Camera size={18} /> Upload de Foto</>)}
+                      </label>
+                    </div>
+                  </div>
                 </div>
-                <div className="form-group"><label className="text-[10px]">Resumo do Card (Bio Curta)</label><input value={currentSpecialist.bio} onChange={(e) => setCurrentSpecialist({...currentSpecialist, bio: e.target.value})} placeholder="Bio curta..." /></div>
-                <div className="form-group"><label className="text-[10px]">Perfil Completo (Detalhado para o Modal)</label><textarea rows={4} value={currentSpecialist.perfilCompleto} onChange={(e) => setCurrentSpecialist({...currentSpecialist, perfilCompleto: e.target.value})} placeholder="Biografia completa, formação, etc..." /></div>
-                <button type="button" onClick={addSpecialist} className="w-full py-4 border-2 border-gold/40 text-gold rounded-xl font-bold hover:bg-gold hover:text-navy transition-all uppercase text-xs tracking-widest"><Plus size={18} /> Inserir Advogado</button>
+                <div className="form-group"><label>Bio Curta (Resumo do Card)</label><input value={currentSpecialist.bio} onChange={(e) => setCurrentSpecialist({...currentSpecialist, bio: e.target.value})} placeholder="Uma frase impactante sobre a atuação..." /></div>
+                <div className="form-group"><label>Perfil Completo (Modal)</label><textarea rows={4} value={currentSpecialist.perfilCompleto} onChange={(e) => setCurrentSpecialist({...currentSpecialist, perfilCompleto: e.target.value})} placeholder="Formação, especializações e experiência..." /></div>
+                <button type="button" onClick={addSpecialist} className="btn-outline w-full !bg-gold/5"><Plus size={18} /> Inserir na Equipe</button>
               </div>
-              <div className="bg-gold/5 p-5 rounded-xl border border-gold/20 flex items-center gap-4"><Camera className="text-gold" size={24} /><p className="text-[11px] text-slate-300">Envie a foto vertical (PNG) via WhatsApp para o Squad.</p></div>
-            </section>
+            </motion.section>
 
-            <section className="glass-card space-y-10">
-              <div className="flex items-center gap-3 border-b border-white/5 pb-6">
-                <Scale className="text-gold" size={28} /><h2 className="text-xl md:text-2xl font-bold uppercase tracking-wider">Contato</h2>
+            {/* Seção Contato */}
+            <motion.section initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="glass-card space-y-12">
+              <div className="flex items-center justify-between border-b border-gold/10 pb-8">
+                <div className="flex items-center gap-4">
+                  <Scale className="text-gold" size={24} />
+                  <h2 className="text-2xl font-serif font-medium tracking-wide">Dados de Contato</h2>
+                </div>
+                <Tooltip text="Estes dados alimentam os links automáticos de contato no site." />
               </div>
-              <div className="grid md:grid-cols-2 gap-8">
-                <div className="form-group"><label>E-mail</label><input name="contato_email" type="email" value={formData.contato_email} onChange={handleChange} placeholder="email@dominio.com" /></div>
-                <div className="form-group"><label>WhatsApp</label><input name="contato_whatsapp" type="text" value={formData.contato_whatsapp} onChange={handleChange} placeholder="(00) 00000-0000" /></div>
+              <div className="grid md:grid-cols-2 gap-12">
+                <div className="form-group">
+                  <label>E-mail Corporativo</label>
+                  <input name="contato_email" type="email" value={formData.contato_email} onChange={handleChange} className={formErrors.email ? 'border-red-400' : ''} placeholder="exemplo@baldez.adv.br" />
+                  {formErrors.email && <p className="text-[10px] text-red-400 uppercase tracking-widest mt-1">E-mail inválido</p>}
+                </div>
+                <div className="form-group">
+                  <label>WhatsApp (Link Direto)</label>
+                  <input name="contato_whatsapp" type="text" value={formData.contato_whatsapp} onChange={handleChange} className={formErrors.whatsapp ? 'border-red-400' : ''} placeholder="(00) 00000-0000" />
+                  {formErrors.whatsapp && <p className="text-[10px] text-red-400 uppercase tracking-widest mt-1">WhatsApp inválido</p>}
+                </div>
               </div>
-            </section>
+            </motion.section>
 
-            <button type="submit" disabled={loading} className="btn-primary flex items-center justify-center gap-3 py-6 text-xl shadow-2xl">
-              {loading ? <Loader2 className="animate-spin" size={28} /> : <><FileText size={28} /> Finalizar e Consolidar Dados</>}
+            <button type="submit" disabled={loading || formErrors.email || formErrors.whatsapp} className="btn-primary !py-8 !text-base shadow-glow">
+              {loading ? <Loader2 className="animate-spin" size={28} /> : <><FileText size={24} /> Finalizar e Consolidar Dados</>}
             </button>
           </form>
         )}
 
-        <footer className="mt-20 text-center text-slate-500 text-[10px] md:text-xs py-10 border-t border-white/5">
-          <p>© 2026 Baldez Advogados Associados.</p>
+        <footer className="mt-32 text-center text-slate-500 text-[10px] uppercase tracking-[0.3em] py-12 border-t border-gold/10">
+          <p>© 2026 Baldez Advogados Associados. Excelência em Advocacia.</p>
         </footer>
       </main>
 
       <div className="floating-container">
         {showTopButton && <button onClick={scrollToTop} className="fab fab-top"><ArrowUp size={24} /></button>}
-        <a href="https://wa.me/5512996088349" className="fab fab-whatsapp" target="_blank" rel="noopener noreferrer"><MessageCircle size={28} /></a>
+        <a href="https://wa.me/5598987910719" className="fab fab-whatsapp" target="_blank" rel="noopener noreferrer"><MessageCircle size={28} /></a>
       </div>
+
+      <AnimatePresence>{showPreview && previewMember && <CardPreview member={previewMember} onClose={() => setShowPreview(false)} />}</AnimatePresence>
     </div>
   );
 }

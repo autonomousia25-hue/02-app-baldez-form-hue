@@ -1,28 +1,28 @@
-# Plano de Implementação: Formulário Baldez V2 🏛️
+# Plano de Implementação: Baldez Form V6.1 (Final) 🏛️
 
-**Status Atual:** 🟢 Implantado em Produção (Vercel)
-**Link:** [https://02-app-baldez-form-hue.vercel.app/](https://02-app-baldez-form-hue.vercel.app/)
+## 🎯 Objetivo Concluído
+Implementação de um portal de captura de conteúdo institucional em conformidade com a arquitetura do site oficial Baldez Advogados.
 
-Este plano descreve a criação de um novo repositório para um formulário de coleta de dados, permitindo que o cliente (Baldez Advogados) envie informações estruturadas para atualizar o site principal.
+## 🛠️ Status das Áreas (Sprint Final)
 
-## 📋 Lista de Tarefas (Checklist)
+### 1. UX/UI (Equipe de Design) - ✅ CONCLUÍDO
+- Layout Vertical implementado para melhor legibilidade.
+- Máscara de telefone limitada a 11 dígitos.
+- Espaçamento entre blocos otimizado (Glassmorphism).
 
-### Fase 1: Infraestrutura (CONCLUÍDO ✅)
-- [x] Criar repositório `02-app-baldez-form-hue` no GitHub.
-- [x] Provisionar tabela `conteudo_site_solicitacoes` no Supabase.
-- [x] Configurar Row Level Security (RLS) para inserções públicas.
+### 2. PO (Product Owner) - ✅ CONCLUÍDO
+- Campos alinhados com o Site Principal:
+    - Especialistas: Nome, Cargo, OAB, Bio (Card), Perfil Completo (Modal).
+    - Áreas de Atuação: Lista dinâmica ilimitada.
 
-### Fase 2: Desenvolvimento V1 (CONCLUÍDO ✅)
-- [x] UI Premium com Glassmorphism e paleta Baldez (#0B1A30, #C5A059).
-- [x] Integração com Supabase via variáveis de ambiente.
-- [x] Botão flutuante de WhatsApp e Voltar ao Topo.
+### 3. Infraestrutura (TI) - ✅ CONCLUÍDO
+- Sincronização do HD externo (AIA-CORTEX-HUB).
+- Configuração de Variáveis de Ambiente na Vercel (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`).
+- Reparo de Dirty Bit no HD via script `fix_hd.sh`.
 
-### Fase 3: Refinamento V2 (CONCLUÍDO ✅)
-- [x] **Múltiplos Especialistas:** Lógica de adição em fila antes do envio final.
-- [x] **Máscara de Telefone:** Formatação dinâmica `(00) 00000-0000`.
-- [x] **Heurísticas de Nielsen:** Implementação de dicas visuais (H2, H4, H6, H10).
-- [x] **Resiliência:** Tratamento de erros para chaves ausentes.
+## 📈 Próximos Passos (Próxima Sprint)
+- Implementação de Upload de Imagens (opcional).
+- Automação via n8n para processar o JSON e atualizar o site automaticamente.
 
-### Fase 4: Sincronização Local (PENDENTE 🟡)
-- [ ] Restaurar acesso ao HD externo do usuário.
-- [ ] Sincronizar código local com as melhorias do GitHub (`git pull`).
+---
+*Relatório Consolidado por: Cortex (Supervisor AIA)*
