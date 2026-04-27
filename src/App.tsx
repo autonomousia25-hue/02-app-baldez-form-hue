@@ -236,7 +236,7 @@ function App() {
                 <CheckCircle2 size={64} className="text-gold" />
               </div>
               <div>
-                <h3 className="text-4xl font-serif text-white mb-6">ENVIADO COM SUCESSO!</h3>
+                <h3 className="text-4xl font-serif text-white mb-6">DADOS ENVIADOS COM SUCESSO!</h3>
                 <p className="text-slate-400 max-w-md mx-auto text-sm leading-relaxed">
                   As informações foram consolidadas seguindo os padrões de excelência Baldez.
                 </p>
