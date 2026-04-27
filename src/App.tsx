@@ -125,13 +125,28 @@ function App() {
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    
+    // Gera um nome de arquivo amigável baseado no nome do advogado
+    const nameSlug = currentSpecialist.nome
+      ? currentSpecialist.nome
+          .toLowerCase()
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '') // Remove acentos
+          .replace(/[^a-z0-9]/g, '-')     // Substitui caracteres especiais por hífens
+          .replace(/-+/g, '-')            // Evita hífens duplos
+          .replace(/^-|-$/g, '')          // Remove hífens no início/fim
+      : 'advogado';
+    
     setUploading(true);
     try {
       const fileExt = file.name.split('.').pop();
-      const fileName = `${crypto.randomUUID()}.${fileExt}`;
+      // Combina o nome do advogado com um pequeno ID único para evitar conflitos se subir a foto 2x
+      const fileName = `${nameSlug}-${crypto.randomUUID().substring(0, 8)}.${fileExt}`;
       const filePath = `equipe/${fileName}`;
+      
       const { error: uploadError } = await supabase.storage.from('fotos-equipe').upload(filePath, file);
       if (uploadError) throw uploadError;
+      
       const { data } = supabase.storage.from('fotos-equipe').getPublicUrl(filePath);
       setCurrentSpecialist({ ...currentSpecialist, imagem: data.publicUrl });
     } catch (error: any) {
